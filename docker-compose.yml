@@ -1,0 +1,36 @@
+services:
+  article-service-1:
+    image: happyheadlines-article
+    build: .
+    environment:
+      INSTANCE_NAME: article-service-1
+    volumes:
+      - article-data-csharp:/app/article-data
+
+  article-service-2:
+    image: happyheadlines-article
+    environment:
+      INSTANCE_NAME: article-service-2
+    volumes:
+      - article-data-csharp:/app/article-data
+
+  article-service-3:
+    image: happyheadlines-article
+    environment:
+      INSTANCE_NAME: article-service-3
+    volumes:
+      - article-data-csharp:/app/article-data
+
+  load-balancer:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - article-service-1
+      - article-service-2
+      - article-service-3
+
+volumes:
+  article-data-csharp:
