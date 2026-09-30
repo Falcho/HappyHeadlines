@@ -32,5 +32,17 @@ services:
       - article-service-2
       - article-service-3
 
+  seq:
+    image: datalust/seq:latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "True"
+    ports:
+      - "127.0.0.1:8081:80"
+      - "127.0.0.1:5341:5341"
+    volumes:
+      - seq-data:/data
+
 volumes:
   article-data-csharp:
+  seq-data:
