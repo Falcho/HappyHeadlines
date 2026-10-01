@@ -2,8 +2,49 @@ using CommentService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var serviceName = builder.Environment.ApplicationName;
+var seqUrl = builder.Configuration["SeqUrl"]
+    ?? "http://localhost:5341";
+
+builder.Logging.AddOpenTelemetry(logging =>
+{
+    logging.SetResourceBuilder(
+        ResourceBuilder.CreateDefault().AddService(serviceName));
+
+    logging.IncludeFormattedMessage = true;
+    logging.IncludeScopes = true;
+
+    logging.AddOtlpExporter(exporter =>
+    {
+        exporter.Endpoint =
+            new Uri($"{seqUrl}/ingest/otlp/v1/logs");
+
+        exporter.Protocol = OtlpExportProtocol.HttpProtobuf;
+    });
+});
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName))
+    .WithTracing(tracing =>
+    {
+        tracing.AddAspNetCoreInstrumentation();
+        tracing.AddHttpClientInstrumentation();
+
+        tracing.AddOtlpExporter(exporter =>
+        {
+            exporter.Endpoint =
+                new Uri($"{seqUrl}/ingest/otlp/v1/traces");
+
+            exporter.Protocol = OtlpExportProtocol.HttpProtobuf;
+        });
+    });
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();

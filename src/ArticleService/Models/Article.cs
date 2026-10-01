@@ -6,4 +6,5 @@ public class Article
     public string Title { get; set; } = string.Empty;
     public string Content { get; set; } = string.Empty;
     public ArticleScope Scope { get; set; }
+    public DateTime PublishedAt { get; set; }
 }

@@ -2,6 +2,7 @@ using ArticleService.Contracts;
 using ArticleService.Data;
 using ArticleService.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace ArticleService.Controllers;
 
@@ -25,7 +26,8 @@ public class ArticlesController : ControllerBase
             Id = Guid.NewGuid(),
             Title = request.Title,
             Content = request.Content,
-            Scope = request.Scope!.Value
+            Scope = request.Scope!.Value,
+            PublishedAt = DateTime.UtcNow
         };
 
         await using var database =
@@ -35,6 +37,32 @@ public class ArticlesController : ControllerBase
         await database.SaveChangesAsync();
 
         return StatusCode(StatusCodes.Status201Created, article);
+    }
+
+    [HttpGet("recent")]
+    public async Task<ActionResult<List<Article>>> ReadRecent()
+    {
+        var now = DateTime.UtcNow;
+        var cutoff = now.AddDays(-1);
+        var articles = new List<Article>();
+
+        foreach (var scope in Enum.GetValues<ArticleScope>())
+        {
+            await using var database = _databaseFactory.Create(scope);
+
+            var recentArticles = await database.Articles
+                .AsNoTracking()
+                .Where(article =>
+                    article.PublishedAt >= cutoff &&
+                    article.PublishedAt <= now)
+                .ToListAsync();
+
+            articles.AddRange(recentArticles);
+        }
+
+        return Ok(articles
+            .OrderByDescending(article => article.PublishedAt)
+            .ToList());
     }
 
     [HttpGet("{scope}/{id:guid}")]

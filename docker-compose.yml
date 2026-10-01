@@ -4,6 +4,8 @@ services:
     build: .
     environment:
       INSTANCE_NAME: article-service-1
+      RabbitMq__Host: rabbitmq
+      SeqUrl: http://seq:5341
     volumes:
       - article-data-csharp:/app/article-data
 
@@ -11,6 +13,8 @@ services:
     image: happyheadlines-article
     environment:
       INSTANCE_NAME: article-service-2
+      RabbitMq__Host: rabbitmq
+      SeqUrl: http://seq:5341
     volumes:
       - article-data-csharp:/app/article-data
 
@@ -18,6 +22,8 @@ services:
     image: happyheadlines-article
     environment:
       INSTANCE_NAME: article-service-3
+      RabbitMq__Host: rabbitmq
+      SeqUrl: http://seq:5341
     volumes:
       - article-data-csharp:/app/article-data
 
@@ -43,6 +49,19 @@ services:
     volumes:
       - seq-data:/data
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    hostname: happyheadlines-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: student
+      RABBITMQ_DEFAULT_PASS: schoolproject
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
 volumes:
   article-data-csharp:
   seq-data:
+  rabbitmq-data:
