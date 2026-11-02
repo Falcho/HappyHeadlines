@@ -1,8 +1,10 @@
 using ArticleService.Contracts;
 using ArticleService.Data;
 using ArticleService.Models;
+using ArticleService.Caching;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace ArticleService.Controllers;
 
@@ -11,10 +13,12 @@ namespace ArticleService.Controllers;
 public class ArticlesController : ControllerBase
 {
     private readonly ArticleDbContextFactory _databaseFactory;
+    private readonly ArticleCache _cache;
 
-    public ArticlesController(ArticleDbContextFactory databaseFactory)
+    public ArticlesController(ArticleDbContextFactory databaseFactory, ArticleCache cache)
     {
         _databaseFactory = databaseFactory;
+        _cache = cache;
     }
 
     [HttpPost]
@@ -75,17 +79,30 @@ public class ArticlesController : ControllerBase
             return BadRequest("Invalid article scope.");
         }
 
-        await using var database = _databaseFactory.Create(scope);
-
-        var article = await database.Articles.FindAsync(id);
-
-        if (article is null)
+        if (scope == ArticleScope.Global)
         {
-            return NotFound();
+            var cachedArticle = _cache.Get(id);
+
+            if (cachedArticle is not null)
+            {
+                Response.Headers["X-Article-Cache"] = "HIT";
+                return Ok(cachedArticle);
+            }
+
+            Response.Headers["X-Article-Cache"] = "MISS";
         }
 
-        return Ok(article);
+    await using var database = _databaseFactory.Create(scope);
+
+    var article = await database.Articles.FindAsync(id);
+
+    if (article is null)
+    {
+        return NotFound();
     }
+
+    return Ok(article);
+}
 
     [HttpPut("{scope}/{id:guid}")]
     public async Task<ActionResult<Article>> Update(

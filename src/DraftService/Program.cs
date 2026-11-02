@@ -45,6 +45,7 @@ builder.Services.AddOpenTelemetry()
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
 
 var dataDirectory = Path.Combine(
     builder.Environment.ContentRootPath,
@@ -70,6 +71,8 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();

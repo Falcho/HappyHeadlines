@@ -2,6 +2,7 @@ using System.Text.Json;
 using CommentService.Contracts;
 using CommentService.Data;
 using CommentService.Models;
+using CommentService.Caching;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Polly.CircuitBreaker;
@@ -15,13 +16,15 @@ public class CommentsController : ControllerBase
 {
     private readonly CommentDbContext _database;
     private readonly IHttpClientFactory _httpClientFactory;
-
+    private readonly CommentCache _cache;
     public CommentsController(
         CommentDbContext database,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        CommentCache commentCache)
     {
         _database = database;
         _httpClientFactory = httpClientFactory;
+        _cache = commentCache;
     }
 
     [HttpPost]
@@ -89,6 +92,8 @@ public class CommentsController : ControllerBase
         _database.Comments.Add(comment);
         await _database.SaveChangesAsync();
 
+        _cache.Remove(comment.ArticleId);
+
         return StatusCode(StatusCodes.Status201Created, comment);
     }
 
@@ -96,9 +101,22 @@ public class CommentsController : ControllerBase
     public async Task<ActionResult<List<Comment>>> ReadForArticle(
         Guid articleId)
     {
+        var cachedComments = _cache.Get(articleId);
+
+        if (cachedComments is not null)
+        {
+            Response.Headers["X-Comment-Cache"] = "HIT";
+            return Ok(cachedComments);
+        }
+
+        Response.Headers["X-Comment-Cache"] = "MISS";
+
         var comments = await _database.Comments
+            .AsNoTracking()
             .Where(comment => comment.ArticleId == articleId)
             .ToListAsync();
+
+        _cache.Set(articleId, comments);
 
         return Ok(comments);
     }

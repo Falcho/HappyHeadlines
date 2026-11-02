@@ -78,6 +78,7 @@ await using var rabbitMqConnection =
     await rabbitMqFactory.CreateConnectionAsync();
 
 builder.Services.AddSingleton<IConnection>(rabbitMqConnection);
+builder.Services.AddSwaggerGen();
 
 await using (var channel =
     await rabbitMqConnection.CreateChannelAsync())
@@ -113,6 +114,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();

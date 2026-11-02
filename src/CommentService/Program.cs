@@ -1,4 +1,5 @@
 using CommentService.Data;
+using CommentService.Caching;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
@@ -6,6 +7,7 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,7 +49,9 @@ builder.Services.AddOpenTelemetry()
     });
 
 builder.Services.AddControllers();
+builder.Services.AddSingleton<CommentCache>();
 builder.Services.AddOpenApi();
+builder.Services.AddSwaggerGen();
 
 var dataDirectory = Path.Combine(
     builder.Environment.ContentRootPath,
@@ -83,6 +87,24 @@ builder.Services.AddHttpClient("ProfanityService", client =>
 
 var app = builder.Build();
 
+var commentCache = app.Services.GetRequiredService<CommentCache>();
+
+var cacheHits = Metrics.CreateCounter(
+    "happyheadlines_cache_hits_total",
+    "Total cache hits.");
+
+var cacheMisses = Metrics.CreateCounter(
+    "happyheadlines_cache_misses_total",
+    "Total cache misses.");
+
+Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
+{
+    var statistics = commentCache.GetStatistics();
+
+    cacheHits.IncTo(statistics.Hits);
+    cacheMisses.IncTo(statistics.Misses);
+});
+
 using (var scope = app.Services.CreateScope())
 {
     var database = scope.ServiceProvider
@@ -94,8 +116,11 @@ using (var scope = app.Services.CreateScope())
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();
 app.MapControllers();
+app.MapMetrics();
 app.Run();

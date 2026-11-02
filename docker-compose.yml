@@ -1,7 +1,10 @@
 services:
   article-service-1:
     image: happyheadlines-article
-    build: .
+    build:
+      context: .
+      args:
+        SERVICE_NAME: ArticleService
     environment:
       INSTANCE_NAME: article-service-1
       RabbitMq__Host: rabbitmq
@@ -61,7 +64,24 @@ services:
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
 volumes:
   article-data-csharp:
   seq-data:
   rabbitmq-data:
+  prometheus-data:
+  grafana-data:

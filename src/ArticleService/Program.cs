@@ -8,6 +8,8 @@ using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using ArticleService.Caching;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +61,9 @@ builder.Services.AddControllers()
 
 builder.Services.AddOpenApi();
 builder.Services.AddSingleton<ArticleDbContextFactory>();
+builder.Services.AddSingleton<ArticleCache>();
+builder.Services.AddHostedService<ArticleCacheWorker>();
+builder.Services.AddSwaggerGen();
 
 var rabbitMqFactory = new ConnectionFactory
 {
@@ -79,6 +84,24 @@ if (rabbitMqConnection is not null)
 }
 
 var app = builder.Build();
+
+var articleCache = app.Services.GetRequiredService<ArticleCache>();
+
+var cacheHits = Metrics.CreateCounter(
+    "happyheadlines_cache_hits_total",
+    "Total cache hits.");
+
+var cacheMisses = Metrics.CreateCounter(
+    "happyheadlines_cache_misses_total",
+    "Total cache misses.");
+
+Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
+{
+    var statistics = articleCache.GetStatistics();
+
+    cacheHits.IncTo(statistics.Hits);
+    cacheMisses.IncTo(statistics.Misses);
+});
 
 var databaseFactory = app.Services.GetRequiredService<ArticleDbContextFactory>();
 
@@ -112,10 +135,11 @@ app.Use(async (context, next) =>
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();
-
 app.MapControllers();
-
+app.MapMetrics();
 app.Run();

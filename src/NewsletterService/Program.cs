@@ -70,6 +70,7 @@ builder.Services.AddHttpClient("ArticleService", client =>
 
 builder.Services.AddSingleton<DailyNewsletterSender>();
 builder.Services.AddHostedService<DailyNewsletterWorker>();
+builder.Services.AddSwaggerGen();
 
 var rabbitMqFactory = new ConnectionFactory
 {
@@ -89,6 +90,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseAuthorization();
