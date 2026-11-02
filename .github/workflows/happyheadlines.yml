@@ -12,7 +12,6 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    context: .
     strategy:
       matrix:
         service:
@@ -39,7 +38,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ./HappyHeadlines
+          context: .
           build-args: SERVICE_NAME=${{ matrix.service }}
           push: true
           tags: |
