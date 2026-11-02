@@ -3,9 +3,7 @@ name: HappyHeadlines CI/CD
 on:
   push:
     branches: [main]
-    paths:
-      - "HappyHeadlines/**"
-      - ".github/workflows/happyheadlines.yml"
+
 
 permissions:
   contents: read
@@ -14,6 +12,7 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    context: .
     strategy:
       matrix:
         service:
@@ -35,7 +34,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set image name
-        run: echo "IMAGE=ghcr.io/rulz123/happyheadlines-$(echo '${{ matrix.service }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: echo "IMAGE=ghcr.io/falcho/happyheadlines-$(echo '${{ matrix.service }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
       - name: Build and push
         uses: docker/build-push-action@v6
