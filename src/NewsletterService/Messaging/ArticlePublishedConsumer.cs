@@ -4,6 +4,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using NewsletterService.Contracts;
+using NewsletterService.Services;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -18,17 +19,20 @@ public class ArticlePublishedConsumer : BackgroundService
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly ILogger<ArticlePublishedConsumer> _logger;
     private readonly IHostApplicationLifetime _lifetime;
+    private readonly SubscriberClient _subscriberClient;
 
     public ArticlePublishedConsumer(
         IConnection connection,
         IOptions<JsonOptions> jsonOptions,
         ILogger<ArticlePublishedConsumer> logger,
-        IHostApplicationLifetime lifetime)
+        IHostApplicationLifetime lifetime,
+        SubscriberClient subscriberClient)
     {
         _connection = connection;
         _jsonOptions = jsonOptions.Value.JsonSerializerOptions;
         _logger = logger;
         _lifetime = lifetime;
+        _subscriberClient = subscriberClient;
     }
 
     private static string? ReadHeader(
@@ -82,10 +86,23 @@ public class ArticlePublishedConsumer : BackgroundService
                         message.Body.Span, _jsonOptions)
                     ?? throw new JsonException("Article message was null.");
 
-                _logger.LogInformation(
-                    "Simulated immediate newsletter for article {ArticleId}: {Title}",
-                    published.Id,
-                    published.Title);
+                var subscribers =
+                    await _subscriberClient.GetSubscribersAsync();
+
+                if (subscribers is null)
+                {
+                    _logger.LogWarning(
+                        "Immediate newsletter for article {ArticleId} skipped: subscribers are unavailable.",
+                        published.Id);
+                }
+                else
+                {
+                    _logger.LogInformation(
+                        "Simulated immediate newsletter for article {ArticleId} to {SubscriberCount} subscribers: {Title}",
+                        published.Id,
+                        subscribers.Count,
+                        published.Title);
+                }
 
                 await channel.BasicAckAsync(
                     deliveryTag: message.DeliveryTag,

@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 using NewsletterService.Messaging;
 using NewsletterService.Models;
 using RabbitMQ.Client;
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Resources;
@@ -68,6 +70,30 @@ builder.Services.AddHttpClient("ArticleService", client =>
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+// SubscriberService lives in its own swimlane. Timeout and circuit breaker
+// stop a slow or failing SubscriberService from dragging NewsletterService down.
+builder.Services.AddHttpClient("SubscriberService", client =>
+{
+    client.BaseAddress = new Uri(
+        builder.Configuration["SubscriberServiceUrl"]
+        ?? "http://localhost:5060");
+
+    client.Timeout = Timeout.InfiniteTimeSpan;
+})
+.AddResilienceHandler("subscriber-pipeline", pipeline =>
+{
+    pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+    {
+        FailureRatio = 1.0,
+        MinimumThroughput = 3,
+        SamplingDuration = TimeSpan.FromSeconds(30),
+        BreakDuration = TimeSpan.FromSeconds(15)
+    });
+
+    pipeline.AddTimeout(TimeSpan.FromSeconds(3));
+});
+
+builder.Services.AddSingleton<SubscriberClient>();
 builder.Services.AddSingleton<DailyNewsletterSender>();
 builder.Services.AddHostedService<DailyNewsletterWorker>();
 builder.Services.AddSwaggerGen();
@@ -84,6 +110,7 @@ await using var rabbitMqConnection =
 
 builder.Services.AddSingleton<IConnection>(rabbitMqConnection);
 builder.Services.AddHostedService<ArticlePublishedConsumer>();
+builder.Services.AddHostedService<WelcomeMailConsumer>();
 
 var app = builder.Build();
 

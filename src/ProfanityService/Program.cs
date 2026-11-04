@@ -54,10 +54,11 @@ var dataDirectory = Path.Combine(
 
 Directory.CreateDirectory(dataDirectory);
 
-var databasePath = Path.Combine(dataDirectory, "profanity.db");
+var connectionString = builder.Configuration.GetConnectionString("ProfanityDatabase")
+    ?? "Host=localhost;Port=5434;Database=profanity;Username=student;Password=schoolproject";
 
 builder.Services.AddDbContext<ProfanityDbContext>(options =>
-    options.UseSqlite($"Data Source={databasePath}"));
+    options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 

@@ -21,12 +21,15 @@ public class NewslettersController : ControllerBase
     {
         try
         {
-            var articleCount = await _sender.SendAsync(cancellationToken);
+            var (articleCount, subscriberCount) =
+                await _sender.SendAsync(cancellationToken);
 
             return Ok(new
             {
                 simulated = true,
-                articleCount
+                sent = subscriberCount is not null,
+                articleCount,
+                subscriberCount
             });
         }
         catch (HttpRequestException)

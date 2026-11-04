@@ -9,8 +9,7 @@ services:
       INSTANCE_NAME: article-service-1
       RabbitMq__Host: rabbitmq
       SeqUrl: http://seq:5341
-    volumes:
-      - article-data-csharp:/app/article-data
+      ConnectionStrings__ArticleDatabase: "Host=postgres;Port=5432;Username=student;Password=schoolproject"
 
   article-service-2:
     image: happyheadlines-article
@@ -18,8 +17,7 @@ services:
       INSTANCE_NAME: article-service-2
       RabbitMq__Host: rabbitmq
       SeqUrl: http://seq:5341
-    volumes:
-      - article-data-csharp:/app/article-data
+      ConnectionStrings__ArticleDatabase: "Host=postgres;Port=5432;Username=student;Password=schoolproject"
 
   article-service-3:
     image: happyheadlines-article
@@ -27,8 +25,7 @@ services:
       INSTANCE_NAME: article-service-3
       RabbitMq__Host: rabbitmq
       SeqUrl: http://seq:5341
-    volumes:
-      - article-data-csharp:/app/article-data
+      ConnectionStrings__ArticleDatabase: "Host=postgres;Port=5432;Username=student;Password=schoolproject"
 
   load-balancer:
     image: nginx:1.27-alpine
@@ -79,9 +76,19 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
 
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: student
+      POSTGRES_PASSWORD: schoolproject
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
 volumes:
-  article-data-csharp:
   seq-data:
   rabbitmq-data:
   prometheus-data:
   grafana-data:
+  postgres-data:

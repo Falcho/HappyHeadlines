@@ -53,10 +53,11 @@ var dataDirectory = Path.Combine(
 
 Directory.CreateDirectory(dataDirectory);
 
-var databasePath = Path.Combine(dataDirectory, "drafts.db");
+var connectionString = builder.Configuration.GetConnectionString("DraftDatabase")
+    ?? "Host=localhost;Port=5434;Database=drafts;Username=student;Password=schoolproject";
 
 builder.Services.AddDbContext<DraftDbContext>(options =>
-    options.UseSqlite($"Data Source={databasePath}"));
+    options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 

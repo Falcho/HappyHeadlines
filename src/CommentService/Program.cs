@@ -59,10 +59,11 @@ var dataDirectory = Path.Combine(
 
 Directory.CreateDirectory(dataDirectory);
 
-var databasePath = Path.Combine(dataDirectory, "comments.db");
+var connectionString = builder.Configuration.GetConnectionString("CommentDatabase")
+    ?? "Host=localhost;Port=5434;Database=comments;Username=student;Password=schoolproject";
 
 builder.Services.AddDbContext<CommentDbContext>(options =>
-    options.UseSqlite($"Data Source={databasePath}"));
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddHttpClient("ProfanityService", client =>
 {

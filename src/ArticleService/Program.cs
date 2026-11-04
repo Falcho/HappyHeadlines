@@ -103,22 +103,17 @@ Metrics.DefaultRegistry.AddBeforeCollectCallback(() =>
     cacheMisses.IncTo(statistics.Misses);
 });
 
-var databaseFactory = app.Services.GetRequiredService<ArticleDbContextFactory>();
-
-foreach (var scope in Enum.GetValues<ArticleScope>())
-{
-   await using var database = databaseFactory.Create(scope);
-   await database.Database.EnsureCreatedAsync();
-
-   if (args.Contains("--initialize-only"))
-   {
-       await ArticleSchema.EnsurePublishedAtAsync(database);
-       Console.WriteLine($"Database ready: {scope}");
-    }
-}
-
 if (args.Contains("--initialize-only"))
 {
+    var databaseFactory = app.Services.GetRequiredService<ArticleDbContextFactory>();
+
+    foreach (var scope in Enum.GetValues<ArticleScope>())
+    {
+        await using var database = databaseFactory.Create(scope);
+        await database.Database.EnsureCreatedAsync();
+        Console.WriteLine($"Database ready: {scope}");
+    }
+
     return;
 }
 

@@ -1,17 +1,17 @@
 using ArticleService.Models;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ArticleService.Data;
 
 public class ArticleDbContextFactory
 {
-    private readonly string _dataDirectory;
+    private readonly string _baseConnectionString;
 
-    public ArticleDbContextFactory(IWebHostEnvironment environment)
+    public ArticleDbContextFactory(IConfiguration configuration)
     {
-        _dataDirectory = Path.Combine(environment.ContentRootPath, "article-data");
-        Directory.CreateDirectory(_dataDirectory);
+        _baseConnectionString = configuration.GetConnectionString("ArticleDatabase")
+            ?? "Host=localhost;Port=5434;Username=student;Password=schoolproject";
     }
 
     public ArticleDbContext Create(ArticleScope scope)
@@ -21,17 +21,15 @@ public class ArticleDbContextFactory
             throw new ArgumentOutOfRangeException(nameof(scope), $"Invalid scope value: {scope}");
         }
 
-        var databasePath = Path.Combine(_dataDirectory, $"{scope}.db");
-        var connectionString = new SqliteConnectionStringBuilder
+        var connectionString = new NpgsqlConnectionStringBuilder(_baseConnectionString)
         {
-            DataSource = databasePath
+            Database = $"articles_{scope.ToString().ToLowerInvariant()}"
         }.ToString();
 
         var options = new DbContextOptionsBuilder<ArticleDbContext>()
-            .UseSqlite(connectionString)
+            .UseNpgsql(connectionString)
             .Options;
 
         return new ArticleDbContext(options);
-        
     }
 }

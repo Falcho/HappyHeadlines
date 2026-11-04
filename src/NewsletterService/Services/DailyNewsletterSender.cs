@@ -14,18 +14,21 @@ public class DailyNewsletterSender
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly JsonSerializerOptions _jsonOptions;
     private readonly ILogger<DailyNewsletterSender> _logger;
+    private readonly SubscriberClient _subscriberClient;
 
     public DailyNewsletterSender(
         IHttpClientFactory httpClientFactory,
         IOptions<JsonOptions> jsonOptions,
-        ILogger<DailyNewsletterSender> logger)
+        ILogger<DailyNewsletterSender> logger,
+        SubscriberClient subscriberClient)
     {
         _httpClientFactory = httpClientFactory;
         _jsonOptions = jsonOptions.Value.JsonSerializerOptions;
         _logger = logger;
+        _subscriberClient = subscriberClient;
     }
 
-    public async Task<int> SendAsync(
+    public async Task<(int ArticleCount, int? SubscriberCount)> SendAsync(
         CancellationToken cancellationToken = default)
     {
         using var activity = Source.StartActivity("Daily newsletter");
@@ -40,16 +43,28 @@ public class DailyNewsletterSender
                 cancellationToken)
                 ?? throw new JsonException("Article list was null.");
 
+            var subscribers =
+                await _subscriberClient.GetSubscribersAsync(cancellationToken);
+
+            if (subscribers is null)
+            {
+                _logger.LogWarning(
+                    "Daily newsletter skipped: subscribers are unavailable.");
+
+                return (articles.Count, null);
+            }
+
             var titles = string.Join(
                 "; ",
                 articles.Select(article => article.Title));
 
             _logger.LogInformation(
-                "Simulated daily newsletter with {ArticleCount} articles: {Titles}",
+                "Simulated daily newsletter with {ArticleCount} articles to {SubscriberCount} subscribers: {Titles}",
                 articles.Count,
+                subscribers.Count,
                 titles);
 
-            return articles.Count;
+            return (articles.Count, subscribers.Count);
         }
         catch (Exception exception)
         {
