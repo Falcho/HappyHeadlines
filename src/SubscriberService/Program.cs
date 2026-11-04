@@ -60,7 +60,7 @@ builder.Services.AddSwaggerGen();
 var connectionString = builder.Configuration.GetConnectionString("SubscriberDatabase")
     ?? "Host=localhost;Port=5434;Database=subscribers;Username=student;Password=schoolproject";
 
-builder.Services.AddDbContext<SubscriberDbContext>(options =>
+builder.Services.AddDbContextPool<SubscriberDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 var rabbitMqFactory = new ConnectionFactory

@@ -43,6 +43,16 @@ public class DailyNewsletterSender
                 cancellationToken)
                 ?? throw new JsonException("Article list was null.");
 
+            // Defer fetching: subscribers are only needed when there is
+            // something to send, so an empty day costs no call to SubscriberService.
+            if (articles.Count == 0)
+            {
+                _logger.LogInformation(
+                    "Daily newsletter skipped: no new articles.");
+
+                return (0, null);
+            }
+
             var subscribers =
                 await _subscriberClient.GetSubscribersAsync(cancellationToken);
 

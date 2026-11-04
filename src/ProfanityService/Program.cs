@@ -57,7 +57,7 @@ Directory.CreateDirectory(dataDirectory);
 var connectionString = builder.Configuration.GetConnectionString("ProfanityDatabase")
     ?? "Host=localhost;Port=5434;Database=profanity;Username=student;Password=schoolproject";
 
-builder.Services.AddDbContext<ProfanityDbContext>(options =>
+builder.Services.AddDbContextPool<ProfanityDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 var app = builder.Build();

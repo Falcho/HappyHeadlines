@@ -62,7 +62,7 @@ Directory.CreateDirectory(dataDirectory);
 var connectionString = builder.Configuration.GetConnectionString("CommentDatabase")
     ?? "Host=localhost;Port=5434;Database=comments;Username=student;Password=schoolproject";
 
-builder.Services.AddDbContext<CommentDbContext>(options =>
+builder.Services.AddDbContextPool<CommentDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 builder.Services.AddHttpClient("ProfanityService", client =>

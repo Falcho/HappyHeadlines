@@ -56,7 +56,7 @@ Directory.CreateDirectory(dataDirectory);
 var connectionString = builder.Configuration.GetConnectionString("DraftDatabase")
     ?? "Host=localhost;Port=5434;Database=drafts;Username=student;Password=schoolproject";
 
-builder.Services.AddDbContext<DraftDbContext>(options =>
+builder.Services.AddDbContextPool<DraftDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 var app = builder.Build();
